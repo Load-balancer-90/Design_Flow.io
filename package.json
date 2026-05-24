@@ -1,0 +1,12 @@
+{
+  "name": "design-flow",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend/services/*",
+    "backend/packages/*"
+  ],
+  "scripts": {
+    "dev:auth": "npm run dev -w @design-flow/auth-service"
+  }
+}
