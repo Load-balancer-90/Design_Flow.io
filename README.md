@@ -112,10 +112,11 @@ Default port is set in `backend/services/auth-service/.env` (e.g. `PORT=9000`).
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/health` | Service + DB health check |
-| POST | `/auth/signup` | Register — `{ username, password, displayName? }` |
-| POST | `/auth/login` | Login — `{ username, password }` |
-| GET | `/auth/me` | Current user — `Authorization: Bearer <token>` |
+| GET | `/services/auth/health` | Auth service + DB health check |
+| POST | `/services/auth/signup` | Register — `{ username, password, displayName? }` |
+| POST | `/services/auth/login` | Login — `{ username, password }` |
+| GET | `/services/auth/me` | Current user — `Authorization: Bearer <token>` |
+| GET | `/services/room/health` | Room service + DB health check |
 
 **Signup / login response:**
 

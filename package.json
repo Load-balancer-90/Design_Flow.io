@@ -7,6 +7,7 @@
     "backend/packages/*"
   ],
   "scripts": {
-    "dev:auth": "npm run dev -w @design-flow/auth-service"
+    "dev:auth": "npm run dev -w @design-flow/auth-service",
+    "dev:room": "npm run dev -w @design-flow/room-service"
   }
 }
