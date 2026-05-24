@@ -9,11 +9,13 @@ Collaborative system-design canvas — multiplayer React Flow rooms with microse
 | Monorepo layout (`frontend/`, `backend/`, `docker/`) | Done |
 | Docker Compose — Postgres | Done |
 | **auth-service** — signup, login, JWT, `/me` | Done |
-| room-service | Planned |
+| **room-service** — health endpoint | Done |
+| nginx + Traefik (API gateway) | Done |
+| room-service — room routes | Planned |
 | realtime-service | Planned |
 | canvas-worker | Planned |
 | frontend | Planned |
-| nginx, Traefik, Redis, RabbitMQ | Planned |
+| nginx, Traefik, Redis, RabbitMQ | nginx + Traefik done; Redis, RabbitMQ planned |
 
 ## Project structure
 
@@ -65,7 +67,33 @@ backend/services/auth-service/
 | Database | Postgres 16 |
 | Infra (planned) | Docker Compose, nginx, Traefik, Redis, RabbitMQ |
 
-## Getting started
+## Gateway (nginx + Traefik)
+
+Public API entry: **`http://localhost:8080`**
+
+```text
+Browser → nginx :8080 → Traefik → auth-service :9000 / room-service :9001
+```
+
+Auth and room services run on the **host** (`npm run dev:auth`, `npm run dev:room`). Traefik forwards to `host.docker.internal`.
+
+### Start gateway
+
+```bash
+docker compose up -d postgres traefik nginx
+npm run dev:auth    # terminal 2 — port 9000
+npm run dev:room    # terminal 3 — port 9001
+```
+
+### Test via gateway
+
+```bash
+curl http://localhost:8080/services/auth/health
+curl http://localhost:8080/services/room/health
+```
+
+Direct service URLs (debug): `http://localhost:9000/...`, `http://localhost:9001/...`
+
 
 ### Prerequisites
 
@@ -94,21 +122,26 @@ Ensure `DATABASE_URL` in auth `.env` matches your Postgres credentials.
 npm install
 ```
 
-### 3. Start Postgres
+### 3. Start infrastructure
 
 ```bash
-docker compose up -d postgres
+docker compose up -d postgres traefik nginx
 ```
 
-### 4. Start auth-service
+### 4. Start services
 
 ```bash
 npm run dev:auth
+npm run dev:room
 ```
 
-Default port is set in `backend/services/auth-service/.env` (e.g. `PORT=9000`).
+Use **`http://localhost:8080/services/...`** through the gateway (see [Gateway](#gateway-nginx--traefik)).
+
+Default ports: auth `9000`, room `9001` (set in each service `.env`).
 
 ## Auth API
+
+All paths below are relative to the gateway base `http://localhost:8080` (or direct service ports for local debug).
 
 | Method | Path | Description |
 |--------|------|-------------|

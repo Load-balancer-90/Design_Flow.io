@@ -1,0 +1,24 @@
+http:
+  routers:
+    auth-service:
+      rule: PathPrefix(`/services/auth`)
+      entryPoints:
+        - web
+      service: auth-service
+
+    room-service:
+      rule: PathPrefix(`/services/room`)
+      entryPoints:
+        - web
+      service: room-service
+
+  services:
+    auth-service:
+      loadBalancer:
+        servers:
+          - url: http://host.docker.internal:9000
+
+    room-service:
+      loadBalancer:
+        servers:
+          - url: http://host.docker.internal:9001
