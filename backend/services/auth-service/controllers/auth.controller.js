@@ -1,32 +1,12 @@
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
 import { config } from '../config.js';
 import {
   createUser,
   findUserById,
   findUserByUsername,
 } from '../db/queries.js';
-
-function toPublicUser(row) {
-  return {
-    id: row.id,
-    username: row.username,
-    displayName: row.display_name ?? null,
-    createdAt: row.created_at,
-  };
-}
-
-function signToken(user) {
-  return jwt.sign(
-    {
-      sub: user.id,
-      username: user.username,
-      displayName: user.display_name ?? null,
-    },
-    config.jwtSecret,
-    { expiresIn: config.jwtExpiresIn }
-  );
-}
+import { signToken } from '../utils/auth.token.js';
+import { toPublicUser } from '../utils/user.format.js';
 
 export async function signup(req, res) {
   const { username, password, displayName } = req.body;
