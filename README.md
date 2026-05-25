@@ -169,14 +169,32 @@ All paths below are relative to the gateway base `http://localhost:8080` (or dir
 
 Postgres runs in Docker (`design-flow-postgres`).
 
-**Inspect tables (terminal):**
+**Schema layout**
+
+| Source | Tables |
+|--------|--------|
+| `docker/postgres/init.sql` | `users` |
+| `docker/postgres/migrations/001_rooms.sql` | `rooms`, `room_members`, `canvas_snapshots` |
+| `docker/postgres/migrations/000_schema_migrations.sql` | `schema_migrations` |
+
+**Apply migrations on an existing database** (Postgres already running):
+
+```bash
+docker exec -i design-flow-postgres psql -U design_flow -d design_flow \
+  < docker/postgres/migrations/000_schema_migrations.sql
+
+docker exec -i design-flow-postgres psql -U design_flow -d design_flow \
+  < docker/postgres/migrations/001_rooms.sql
+```
+
+Fresh install (`docker compose down -v && docker compose up -d postgres`) runs `init.sql` + migrations automatically via `docker-entrypoint-initdb.d`.
+
+**Inspect tables:**
 
 ```bash
 docker exec -it design-flow-postgres psql -U design_flow -d design_flow -c "\dt"
-docker exec -it design-flow-postgres psql -U design_flow -d design_flow -c "SELECT id, username, display_name, created_at FROM users;"
+docker exec -it design-flow-postgres psql -U design_flow -d design_flow -c "SELECT * FROM schema_migrations;"
 ```
-
-**Current schema:** `users` (see `docker/postgres/init.sql`)
 
 ## Architecture (planned)
 
@@ -198,9 +216,7 @@ docker compose up -d postgres  # resume later
 ## Next steps
 
 1. `backend/packages/shared` — shared JWT verify + event constants
-2. Add remaining tables to `init.sql` (`rooms`, `room_members`, `canvas_snapshots`)
-3. **room-service**
-4. **frontend** — login / signup UI
+2. **room-service** — routes using new tables
+3. **frontend** — login / signup UI
 5. **realtime-service** + Redis adapter
 6. **canvas-worker** + RabbitMQ
-7. nginx + Traefik in Docker Compose

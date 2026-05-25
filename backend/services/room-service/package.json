@@ -9,6 +9,7 @@
     "start": "node index.js"
   },
   "dependencies": {
+    "@design-flow/shared": "*",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "pg": "^8.21.0"
