@@ -12,10 +12,11 @@ Collaborative system-design canvas — multiplayer React Flow rooms with microse
 | **`@design-flow/shared`** — JWT verify + auth middleware factory | Done |
 | **auth-service** — signup, login, JWT, `/me` | Done |
 | **room-service** — create, get, join, canvas snapshot | Done |
-| realtime-service | Planned |
+| **realtime-service** — JWT, join/leave room, presence events (1 instance) | Done |
+| nginx → Socket.io proxy (`/socket.io/`) | Done |
+| realtime ×2 + Redis adapter | Planned |
 | canvas-worker + RabbitMQ | Planned |
 | frontend (React + Vite + React Flow) | Planned |
-| Redis, RabbitMQ | Planned |
 
 ## Project structure
 
@@ -26,7 +27,7 @@ Design_Flow.io/
 │   ├── services/
 │   │   ├── auth-service/              # ✅ REST auth
 │   │   ├── room-service/              # ✅ REST rooms + canvas load
-│   │   ├── realtime-service/          # planned — Socket.io live sync
+│   │   ├── realtime-service/          # ✅ Socket.io (join/leave; canvas sync later)
 │   │   └── canvas-worker/             # planned — async snapshot saves
 │   └── packages/
 │       └── shared/                    # ✅ JWT verify + createAuthMiddleware
@@ -92,11 +93,12 @@ backend/services/room-service/
 
 ## Architecture
 
-**Current (REST):**
+**Current:**
 
 ```text
 Browser → nginx :8080 → Traefik → auth-service :9000
-                                 → room-service :9001
+                      → Traefik → room-service :9001
+                      → realtime-service :9002  (/socket.io/, /services/realtime/)
                                           ↓
                                       Postgres
 ```
@@ -104,7 +106,7 @@ Browser → nginx :8080 → Traefik → auth-service :9000
 **Planned:**
 
 ```text
-Browser → nginx → realtime ×2 ↔ Redis (WebSocket live sync)
+realtime ×2 ↔ Redis (scale Socket.io)
 realtime-service → RabbitMQ → canvas-worker → Postgres (batch snapshot save)
 ```
 
@@ -116,9 +118,11 @@ realtime-service → RabbitMQ → canvas-worker → Postgres (batch snapshot sav
 
 Public API entry: **`http://localhost:8080`**
 
-Auth and room services run on the **host** (`npm run dev:auth`, `npm run dev:room`). Traefik forwards to `host.docker.internal`.
+Auth, room, and realtime run on the **host** (`npm run dev:auth`, `npm run dev:room`, `npm run dev:realtime`). Traefik forwards REST; nginx proxies Socket.io to `:9002`.
 
-Direct service URLs (debug): `http://localhost:9000/...`, `http://localhost:9001/...`
+Direct service URLs (debug): `http://localhost:9000/...`, `http://localhost:9001/...`, `http://localhost:9002/...`
+
+Socket.io client URL: `http://localhost:8080` with `path: '/socket.io'`.
 
 ## Getting started
 
@@ -148,7 +152,13 @@ cp backend/services/auth-service/.env.example backend/services/auth-service/.env
 cp backend/services/room-service/.env.example backend/services/room-service/.env
 ```
 
-Both services need a matching `DATABASE_URL` and the **same `JWT_SECRET`**.
+**realtime-service:**
+
+```bash
+cp backend/services/realtime-service/.env.example backend/services/realtime-service/.env
+```
+
+All three services need a matching `DATABASE_URL` and the **same `JWT_SECRET`**.
 
 ### 2. Install dependencies
 
@@ -165,15 +175,19 @@ docker compose up -d postgres traefik nginx
 ### 4. Start services
 
 ```bash
-npm run dev:auth    # port 9000
-npm run dev:room    # port 9001
+npm run dev:auth      # port 9000
+npm run dev:room      # port 9001
+npm run dev:realtime  # port 9002
 ```
+
+Reload nginx after config changes: `docker compose up -d nginx` (or restart the nginx container).
 
 ### 5. Health checks
 
 ```bash
 curl http://localhost:8080/services/auth/health
 curl http://localhost:8080/services/room/health
+curl http://localhost:8080/services/realtime/health
 ```
 
 Expected: `"status":"ok"` and `"db":"connected"`.
@@ -279,6 +293,38 @@ curl -s "http://localhost:8080/services/room/$ROOM_ID/canvas" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
+### Realtime (Socket.io)
+
+Connect through the gateway (single instance, no Redis yet):
+
+```js
+import { io } from 'socket.io-client';
+
+const socket = io('http://localhost:8080', {
+  path: '/socket.io',
+  auth: { token: accessToken },
+});
+
+socket.emit('join-room', { roomId }, (err, data) => {
+  if (err) console.error(err);
+});
+
+socket.on('room:user-joined', (payload) => { /* ... */ });
+socket.on('room:user-left', (payload) => { /* ... */ });
+socket.on('room:joined', (payload) => { /* ... */ });
+```
+
+| Event | Direction | Payload |
+|-------|-----------|---------|
+| `join-room` | client → server | `{ roomId }` |
+| `leave-room` | client → server | `{ roomId? }` |
+| `room:joined` | server → client | `{ roomId }` |
+| `room:user-joined` | server → others | `{ roomId, user }` |
+| `room:user-left` | server → others | `{ roomId, user }` |
+| `room:error` | server → client | `{ error }` |
+
+User must already be a room member via REST (`POST /services/room/join`) before `join-room`.
+
 ## Database
 
 Postgres runs in Docker (`design-flow-postgres`).
@@ -317,7 +363,7 @@ docker compose up -d postgres traefik nginx   # resume later
 
 ## Next steps
 
-1. **frontend** — login/signup UI, lobby (create/join), React Flow canvas loading snapshot
-2. **realtime-service** — Socket.io live canvas sync, JWT on connect
+1. **frontend** — login/signup UI, lobby (create/join), Socket.io join-room, React Flow canvas
+2. **realtime** — canvas op events (node/edge sync)
 3. **canvas-worker + RabbitMQ** — debounced batch saves to `canvas_snapshots`
-4. **Redis** — pub/sub adapter when scaling realtime to 2+ instances
+4. **Redis + 2× realtime** — nginx upstream second server, Socket.io Redis adapter

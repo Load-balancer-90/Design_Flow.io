@@ -1,0 +1,21 @@
+{
+  "name": "@design-flow/realtime-service",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "dev": "node --watch index.js",
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@design-flow/shared": "*",
+    "@socket.io/redis-adapter": "^8.3.0",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "ioredis": "^5.6.1",
+    "pg": "^8.21.0",
+    "socket.io": "^4.8.1",
+    "zod": "^4.4.3"
+  }
+}
