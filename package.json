@@ -10,6 +10,7 @@
     "dev:auth": "npm run dev -w @design-flow/auth-service",
     "dev:room": "npm run dev -w @design-flow/room-service",
     "dev:realtime": "npm run dev -w @design-flow/realtime-service",
-    "dev:realtime:2": "PORT=9003 npm run dev -w @design-flow/realtime-service"
+    "dev:realtime:2": "PORT=9003 npm run dev -w @design-flow/realtime-service",
+    "dev:web": "npm run dev -w @design-flow/frontend"
   }
 }
